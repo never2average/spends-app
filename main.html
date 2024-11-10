@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bootstrap Carousel Demo</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media (min-width: 768px) {
+            body {
+                display: none;
+            }
+            
+            body:before {
+                content: "This website is only available on mobile devices";
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 24px;
+                text-align: center;
+                display: block;
+            }
+        }
+        
+        .carousel-item img {
+            max-height: 80vh;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Using Material Icons for the chat icon -->
+    <div class="container mt-3">
+        <div class="row justify-content-center">
+            <div class="col-12 text-center">
+                <select class="form-select" aria-label="Select Election">
+                    <option selected>Select Election</option>
+                    <option value="1">2024 US Presidential Election</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-3">
+        <div class="row justify-content-center">
+            <div class="col-12 col-sm-10">
+                <div class="input-group">
+                    <input type="month" class="form-control" id="startMonth" name="startMonth" value="2023-01" style="border-radius: 20px 0 0 20px;">
+                    <span class="input-group-text bg-light" style="border-left: 0; border-right: 0;">to</span>
+                    <input type="month" class="form-control" id="endMonth" name="endMonth" value="2023-12" style="border-radius: 0 20px 20px 0;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container mt-4">
+        <div class="text-center mt-3">
+            <h5>Monthly Campaign Spending</h5>
+        </div>
+        <div class="row justify-content-center">
+            <div class="col-12">
+                <div id="spendingChart"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <script>
+        const trace1 = {
+            x: ['Jan/23', 'Feb/23', 'Mar/23', 'Apr/23', 'May/23', 'Jun/23', 'Jul/23', 'Aug/23', 'Sep/23', 'Oct/23', 'Nov/23', 'Dec/23'],
+            y: [65, 59, 80, 81, 56, 55, 40, 45, 60, 75, 85, 90],
+            name: 'Candidate A',
+            line: {
+                color: 'rgb(75, 192, 192)',
+                shape: 'spline',
+                width: 3
+            },
+            type: 'scatter'
+        };
+
+        const trace2 = {
+            x: ['Jan/23', 'Feb/23', 'Mar/23', 'Apr/23', 'May/23', 'Jun/23', 'Jul/23', 'Aug/23', 'Sep/23', 'Oct/23', 'Nov/23', 'Dec/23'],
+            y: [45, 70, 65, 50, 65, 80, 70, 60, 65, 70, 75, 80],
+            name: 'Candidate B',
+            line: {
+                color: 'rgb(255, 99, 132)',
+                shape: 'spline',
+                width: 3
+            },
+            type: 'scatter'
+        };
+
+        const trace3 = {
+            x: ['Jan/23', 'Feb/23', 'Mar/23', 'Apr/23', 'May/23', 'Jun/23', 'Jul/23', 'Aug/23', 'Sep/23', 'Oct/23', 'Nov/23', 'Dec/23'],
+            y: [30, 40, 45, 50, 55, 45, 50, 55, 45, 50, 55, 60],
+            name: 'Candidate C',
+            line: {
+                color: 'rgb(54, 162, 235)',
+                shape: 'spline',
+                width: 3
+            },
+            type: 'scatter'
+        };
+
+        const layout = {
+            showlegend: false,
+            hovermode: 'x unified',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            xaxis: {
+                showgrid: true,
+                gridcolor: 'rgba(0,0,0,0.1)',
+                tickangle: 35, // Angled ticks to prevent overlap
+                dtick: 2, // Show every other tick
+                rangeslider: {visible: false}, // Adds horizontal scrolling
+                fixedrange: false // Allows zooming/panning
+            },
+            yaxis: {
+                showgrid: false,
+                zeroline: false
+            },
+            margin: {
+                l: 30,
+                r: 0,
+                t: 0,
+                b: 40
+            },
+            height: 350,
+            dragmode: 'pan',
+            scrollZoom: true,
+            modeBarButtonsToAdd: ['pan2d']
+        };
+
+        Plotly.newPlot('spendingChart', [trace1, trace2, trace3], layout, {
+            responsive: true,
+            displayModeBar: false
+        });
+
+        // Update chart when date range changes
+        document.getElementById('startMonth').addEventListener('change', updateChartDateRange);
+        document.getElementById('endMonth').addEventListener('change', updateChartDateRange);
+
+        function updateChartDateRange() {
+            const startMonth = document.getElementById('startMonth').value;
+            const endMonth = document.getElementById('endMonth').value;
+            // Here you would typically fetch new data based on the date range
+            // and update the chart accordingly
+            console.log('Date range updated:', startMonth, 'to', endMonth);
+        }
+    </script>
+
+    <div class="mt-4" style="margin-left: 10px;">
+        <h6>Spend Categorization:</h6>
+    </div>
+
+    <div class="container mt-4">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Payroll</h5>
+                <div class="list-group list-group-flush">
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Food & Dining
+                        <span class="badge bg-primary rounded-pill">$320</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Shopping
+                        <span class="badge bg-primary rounded-pill">$250</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Transportation
+                        <span class="badge bg-primary rounded-pill">$180</span>
+                    </div>
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        Entertainment
+                        <span class="badge bg-primary rounded-pill">$150</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    
+    <button class="btn btn-primary rounded-circle position-fixed" style="bottom: 18px; right: 18px; width: 56px; height: 56px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" onclick="window.location.href='chat.html'">
+        <i class="material-icons">smart_toy</i>
+    </button>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if(!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                document.body.style.display = 'none';
+                document.body.insertAdjacentHTML('beforebegin', '<div style="text-align: center; padding: 50px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">This website is only available on mobile devices</div>');
+            }
+        });
+    </script>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+</body>
+</html>
