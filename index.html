@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Spending App</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        @media (min-width: 768px) {
+            body {
+                display: none;
+            }
+            
+            body:before {
+                content: "This website is only available on mobile devices";
+                position: fixed;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                font-size: 24px;
+                text-align: center;
+                display: block;
+            }
+        }
+        
+        .carousel-item img {
+            max-height: 80vh;
+            object-fit: cover;
+        }
+    </style>
+</head>
+<body>
+    <!-- Using Material Icons for the chat icon -->
+    <div class="container mt-3">
+        <div class="row justify-content-center">
+            <div class="col-12 text-center">
+                <select class="form-select" id="electionSelect" aria-label="Select Election">
+                    <option value="">Select Election</option>
+                    <option value="1">2024 US Presidential Election</option>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div id="mainContent" style="display: none;">
+        <div class="container mt-3">
+            <div class="row justify-content-center">
+                <div class="col-12 col-sm-10">
+                    <div class="input-group">
+                        <input type="month" class="form-control" id="startMonth" name="startMonth" value="2023-01" style="border-radius: 20px 0 0 20px;">
+                        <span class="input-group-text bg-light" style="border-left: 0; border-right: 0;">to</span>
+                        <input type="month" class="form-control" id="endMonth" name="endMonth" value="2023-12" style="border-radius: 0 20px 20px 0;">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="container mt-4">
+            <div class="text-center mt-3">
+                <h5>Monthly Campaign Spending</h5>
+            </div>
+            <div class="row justify-content-center">
+                <div class="col-12">
+                    <div id="spendingChart"></div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+        <script>
+            let spendingData = {};
+            
+            async function fetchSpendingData(startDate, endDate) {
+                try {
+                    const response = await fetch(`http://34.45.230.175/monthly-spends-by-category?start_date=${startDate}&end_date=${endDate}`);
+                    spendingData = await response.json();
+                    updateChartAndCards();
+                } catch (error) {
+                    console.error('Error fetching data:', error);
+                }
+            }
+
+            function updateChartAndCards() {
+                // Process data for chart
+                const dates = Object.keys(spendingData);
+                const candidates = Object.keys(spendingData[dates[0]]);
+                
+                const traces = candidates.map((candidate, index) => {
+                    const colors = ['rgb(75, 192, 192)', 'rgb(255, 99, 132)', 'rgb(54, 162, 235)'];
+                    
+                    return {
+                        x: dates.map(date => {
+                            const [year, month] = date.split('-');
+                            const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 
+                                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                            return `${monthNames[parseInt(month)-1]}-${year.slice(2)}`;
+                        }),
+                        y: dates.map(date => {
+                            const categories = spendingData[date][candidate];
+                            // Sum up all category amounts for total monthly spend
+                            return Object.values(categories).reduce((sum, amount) => sum + amount, 0);
+                        }),
+                        name: candidate,
+                        line: {
+                            color: colors[index % colors.length],
+                            shape: 'spline',
+                            width: 3
+                        },
+                        type: 'scatter'
+                    };
+                });
+
+                const layout = {
+                    showlegend: false,
+                    hovermode: 'x unified',
+                    plot_bgcolor: 'rgba(0,0,0,0)',
+                    paper_bgcolor: 'rgba(0,0,0,0)',
+                    xaxis: {
+                        showgrid: true,
+                        gridcolor: 'rgba(0,0,0,0.1)',
+                        tickangle: 35,
+                        dtick: 1,
+                        rangeslider: {visible: false},
+                        fixedrange: false,
+                        tickformat: '%b-%y'
+                    },
+                    yaxis: {
+                        showgrid: false,
+                        zeroline: false,
+                        title: 'Total Monthly Spend ($)',
+                        tickprefix: '$'
+                    },
+                    margin: {
+                        l: 60,
+                        r: 0,
+                        t: 0,
+                        b: 40
+                    },
+                    height: 350,
+                    dragmode: 'pan',
+                    scrollZoom: true,
+                    modeBarButtonsToAdd: ['pan2d']
+                };
+
+                Plotly.newPlot('spendingChart', traces, layout, {
+                    responsive: true,
+                    displayModeBar: false
+                });
+
+                // Update spend categorization cards
+                // Get all unique categories across all dates and candidates
+                const allCategories = new Set();
+                dates.forEach(date => {
+                    candidates.forEach(candidate => {
+                        Object.keys(spendingData[date][candidate]).forEach(category => {
+                            allCategories.add(category);
+                        });
+                    });
+                });
+
+                // Calculate cumulative spend per category per candidate
+                const categoryTotals = {};
+                allCategories.forEach(category => {
+                    categoryTotals[category] = {};
+                    candidates.forEach(candidate => {
+                        categoryTotals[category][candidate] = dates.reduce((total, date) => {
+                            return total + (spendingData[date][candidate][category] || 0);
+                        }, 0);
+                    });
+                });
+                
+                const cardBody = document.querySelector('.cards-list');
+                cardBody.innerHTML = `
+                    ${Array.from(allCategories).map(category => `
+                        <div class="card mb-3 pb-2 px-1" onclick="localStorage.setItem('selectedCategory', '${category}'); window.location.href='spends.html';" style="cursor: pointer;">
+                            <div class="card-body">
+                                <h6 class="mb-3">${category}</h6>
+                                ${candidates.map(candidate => `
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <span>${candidate}</span>
+                                        <span class="badge border border-primary text-primary rounded-pill">$${(categoryTotals[category][candidate] >= 1e9 ? (categoryTotals[category][candidate]/1e9).toFixed(1) + 'Bn' : categoryTotals[category][candidate] >= 1e6 ? (categoryTotals[category][candidate]/1e6).toFixed(1) + 'Mn' : categoryTotals[category][candidate] >= 1e3 ? (categoryTotals[category][candidate]/1e3).toFixed(1) + 'K' : categoryTotals[category][candidate].toFixed(2))}</span>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            <div class="list-group-item px-1 d-flex align-items-right mt-2 w-100">
+                                <div class="d-flex justify-content-end w-100">
+                                    View Breakdown
+                                    <i class="material-icons">arrow_forward</i>
+                                </div>
+                            </div>
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            // Format date for API
+            function formatDateForAPI(dateStr) {
+                const date = new Date(dateStr);
+                return `${date.toLocaleString('default', { month: 'short' })}-${date.getFullYear().toString().slice(-2)}`;
+            }
+
+            function updateChartDateRange() {
+                const startMonth = document.getElementById('startMonth').value;
+                const endMonth = document.getElementById('endMonth').value;
+                const formattedStartDate = formatDateForAPI(startMonth);
+                const formattedEndDate = formatDateForAPI(endMonth);
+                fetchSpendingData(formattedStartDate, formattedEndDate);
+            }
+
+            // Add event listeners for date changes
+            document.getElementById('startMonth').addEventListener('change', updateChartDateRange);
+            document.getElementById('endMonth').addEventListener('change', updateChartDateRange);
+
+            // Add event listener for election selection
+            document.getElementById('electionSelect').addEventListener('change', function() {
+                const selectedValue = this.value;
+                const mainContent = document.getElementById('mainContent');
+                
+                if (selectedValue) {
+                    mainContent.style.display = 'block';
+                    updateChartDateRange(); // Initial load of data
+                } else {
+                    mainContent.style.display = 'none';
+                }
+            });
+        </script>
+
+        <div class="container mt-4">
+            <div class="card" style="border-left: 4px solid #007bff;">
+                <div class="card-body">
+                    <div class="list-group-item d-flex align-items-center w-100" onclick="window.location.href='insights.html'" style="cursor: pointer; border: none;">
+                        <div class="d-flex justify-content-between align-items-center w-100">
+                            <span class="fw-semibold">View Insights</span>
+                            <i class="material-icons" style="color: #007bff;">trending_up</i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-4" style="margin-left: 10px;">
+            <h5>Spend Categorization:</h5>
+        </div>
+
+        <div class="container mt-3 mb-5 cards-list">
+        </div>
+
+        <button class="btn btn-primary rounded-circle position-fixed" style="bottom: 18px; right: 18px; width: 56px; height: 56px; box-shadow: 0 2px 5px rgba(0,0,0,0.2);" onclick="window.location.href='chat.html'">
+            <i class="material-icons">smart_toy</i>
+        </button>
+    </div>
+
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            if(!/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+                document.body.style.display = 'none';
+                document.body.insertAdjacentHTML('beforebegin', '<div style="text-align: center; padding: 50px; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);">This website is only available on mobile devices</div>');
+            }
+        });
+    </script>
+
+    <!-- Bootstrap JS Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+</body>
+</html>

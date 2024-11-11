@@ -140,8 +140,11 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
-            const spendCategory = localStorage.getItem('spend_category_type') || 'Category Name';
-            document.getElementById('pageHeading').textContent = spendCategory;
+            const spendCategory = localStorage.getItem('selectedCategory') || 'Category Name';
+            const titleCaseCategory = spendCategory.split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                .join(' ');
+            document.getElementById('pageHeading').textContent = titleCaseCategory + " Expenses";
         });
     </script>
 
